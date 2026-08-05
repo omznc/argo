@@ -1,0 +1,728 @@
+@import 'tailwindcss';
+
+@source "../../";
+
+@theme {
+  /* ---- Surfaces (from the v2 "refined mono" direction) ---- */
+  --color-ink: #08090b;
+  --color-ink-raised: #0a0c10;
+  --color-ink-haze: #161b26;
+
+  /* ---- Type ---- */
+  --color-bone: #f4f5f2; /* headings */
+  --color-bone-soft: #e6e7e4; /* body on dark */
+  --color-bone-dim: #c7cabf; /* long-form prose */
+  --color-muted: #9a9e97;
+  --color-dim: #6b6f6a;
+  --color-faint: #4f5358;
+  --color-hairline: #2c2f34;
+
+  /* ---- Brand (brand book p.17 — never mix two in one mark) ---- */
+  --color-argo-yellow: #ffb700;
+  --color-argo-red: #b12128;
+  --color-argo-blue: #0b4686;
+
+  /* ---- Partner plaque ---- */
+  --color-plaque: #f4f5f2;
+
+  /* ---- Motion ----
+     Overrides Tailwind's built-in `ease-out`, which is too weak to read as
+     deliberate at UI durations. Every transition in the site uses this one. */
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+
+  --font-display: var(--font-space-grotesk), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-jetbrains-mono), ui-monospace, monospace;
+  --font-heavy: var(--font-archivo), ui-sans-serif, system-ui, sans-serif;
+}
+
+@layer base {
+  html {
+    /**
+     * `scroll-behavior: smooth` is deliberately NOT set here, and putting it
+     * back breaks two things at once. Both were measured in a browser against
+     * this build:
+     *
+     * 1. Navigation stops resetting scroll. The App Router scrolls to the top
+     *    on a route change; under `smooth` that becomes an animation, and the
+     *    streamed content changing the page height cancels it — so opening a
+     *    project left you at whatever offset you clicked from.
+     * 2. In-page anchors stop working entirely. With `smooth` set, clicking a
+     *    `#mission`-style link scrolled nowhere at all, even after three
+     *    seconds. Next handles those itself and the CSS property fights it.
+     *
+     * So the rule was never buying smooth anchor scrolling — it was breaking
+     * the anchors. Toggling the property around a click in JS doesn't rescue
+     * it either: `next/link` calls `preventDefault()` before the event reaches
+     * the document, and the scroll still doesn't happen. If smooth anchors are
+     * wanted, they need a scroll handler that owns the scroll outright.
+     */
+
+    /* The header is not sticky, but anchor targets still deserve breathing room. */
+    scroll-padding-top: 2rem;
+  }
+
+  body {
+    background-color: var(--color-ink);
+    color: var(--color-bone-soft);
+    font-family: var(--font-mono);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  ::selection {
+    background-color: var(--color-argo-yellow);
+    color: var(--color-ink);
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--color-argo-yellow);
+    outline-offset: 3px;
+  }
+
+  /**
+   * Reduced motion means fewer and gentler, not none.
+   *
+   * Looping keyframe animation is the actual vestibular hazard, so that still
+   * gets collapsed globally. Transitions are left alone and handled at each
+   * component instead — they degrade to an opacity-only variant that keeps the
+   * state change legible. Collapsing them here with `!important` would also
+   * have overridden those variants, which is why it no longer does.
+   *
+   * Anything new that moves needs its own `motion-reduce:` variant.
+   */
+  @media (prefers-reduced-motion: reduce) {
+    /* Smooth anchor scrolling is opted out of in JS, where it is opted into. */
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+    }
+  }
+}
+
+@utility argo-hatch {
+  background-image: repeating-linear-gradient(
+    45deg,
+    rgb(255 255 255 / 0.03) 0,
+    rgb(255 255 255 / 0.03) 1px,
+    transparent 1px,
+    transparent 9px
+  );
+}
+
+/* The page-top glow every 1440px frame in the design opens with. */
+@utility argo-veil {
+  background:
+    radial-gradient(90% 60% at 50% -8%, var(--color-ink-haze) 0%, rgb(12 14 20 / 0) 60%),
+    linear-gradient(180deg, var(--color-ink-raised) 0%, var(--color-ink) 100%);
+}
+
+/* The yellow dawn that rises out of the footer. */
+@utility argo-dawn {
+  background: linear-gradient(
+    0deg,
+    rgb(255 183 0 / 0.2) 0%,
+    rgb(255 183 0 / 0.08) 26%,
+    rgb(255 183 0 / 0) 62%
+  );
+}
+
+/**
+ * The mobile nav panel.
+ *
+ * Written here rather than as utilities because of `transition-behavior`:
+ * `visibility` is a discrete property, so without `allow-discrete` it would flip
+ * at the halfway point and blank the panel mid-fade on close. With it, the panel
+ * becomes visible at the start of the open and hidden at the end of the close —
+ * and while hidden it is out of the tab order, which matters because the panel
+ * stays mounted so it has something to animate from.
+ */
+@layer components {
+  .argo-mobile-nav {
+    visibility: hidden;
+    opacity: 0;
+    transform: translateY(-8px);
+    transition:
+      opacity 200ms var(--ease-out),
+      transform 200ms var(--ease-out),
+      visibility 200ms var(--ease-out);
+    transition-behavior: allow-discrete;
+  }
+
+  .argo-mobile-nav[data-open] {
+    visibility: visible;
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  /* Keep the fade, drop the travel. */
+  @media (prefers-reduced-motion: reduce) {
+    .argo-mobile-nav,
+    .argo-mobile-nav[data-open] {
+      transform: none;
+    }
+  }
+}
+
+/**
+ * Aurora over the dawn.
+ *
+ * Three blurred curtains drifting across each other at different, deliberately
+ * non-divisible periods (19s / 25s / 31s — pairwise coprime), so the composite never visibly
+ * repeats — that irregularity is what reads as "breathing" rather than "looping".
+ *
+ * Only transform and opacity animate. The blur rasterises once into a layer the
+ * compositor then moves, so this stays off the main thread; animating the
+ * gradients themselves would repaint every frame.
+ *
+ * `argo-dawn` stays underneath as the static base, so this layer is purely
+ * additive — it can be removed, or never start, without leaving a hole.
+ */
+@layer components {
+  .argo-aurora {
+    /**
+     * Two things have to agree or the top edge shows as a hard line:
+     * the mask must reach fully transparent at the clip boundary, and the band
+     * gradients must already be dim by the time they get there. `contain: paint`
+     * used to do the clipping and cut straight through the blur — overflow does
+     * it in step with the mask instead.
+     */
+    overflow: hidden;
+    -webkit-mask-repeat: no-repeat;
+    mask-repeat: no-repeat;
+    -webkit-mask-image: linear-gradient(
+      0deg,
+      #000 0%,
+      #000 30%,
+      rgb(0 0 0 / 0.5) 64%,
+      transparent 100%
+    );
+    mask-image: linear-gradient(0deg, #000 0%, #000 30%, rgb(0 0 0 / 0.5) 64%, transparent 100%);
+  }
+
+  .argo-aurora-band {
+    position: absolute;
+    /* Sit the curtain body inside the visible box — pushed further down and the
+       gradient cores fall below the fold and it flattens into a wash. */
+    bottom: -12%;
+    height: 128%;
+    /* screen on a dark field adds light rather than covering it. */
+    mix-blend-mode: screen;
+    filter: blur(48px);
+    will-change: transform, opacity;
+  }
+
+  .argo-aurora-band-1 {
+    left: -16%;
+    width: 50%;
+    background: radial-gradient(46% 50% at 50% 88%, rgb(255 183 0 / 0.38) 0%, transparent 74%);
+    animation: argo-aurora-a 19s ease-in-out infinite;
+  }
+
+  .argo-aurora-band-2 {
+    left: 30%;
+    width: 44%;
+    /* The red edge real aurora gets at its lower fringe. */
+    background: radial-gradient(42% 52% at 50% 90%, rgb(177 33 40 / 0.3) 0%, transparent 72%);
+    animation: argo-aurora-b 25s ease-in-out infinite;
+  }
+
+  .argo-aurora-band-3 {
+    right: -8%;
+    width: 54%;
+    background: radial-gradient(44% 52% at 50% 86%, rgb(11 70 134 / 0.52) 0%, transparent 74%);
+    animation: argo-aurora-c 31s ease-in-out infinite;
+  }
+
+  /**
+   * The same curtains hanging from the top of the page, over the veil. Led with
+   * blue rather than yellow so it reads as the night side of the same sky, and
+   * held to lower alphas — the hero's text sits on top of this.
+   *
+   * It fades up over 2s from first paint, so the page still opens on the design
+   * as drawn and the sky arrives right behind it. `both` holds the from-state
+   * before the animation starts, which is what keeps that first frame clean.
+   */
+  .argo-aurora-top {
+    -webkit-mask-image: linear-gradient(
+      180deg,
+      #000 0%,
+      #000 30%,
+      rgb(0 0 0 / 0.5) 64%,
+      transparent 100%
+    );
+    mask-image: linear-gradient(180deg, #000 0%, #000 30%, rgb(0 0 0 / 0.5) 64%, transparent 100%);
+    animation: argo-aurora-reveal 2s ease-out both;
+  }
+
+  .argo-aurora-top .argo-aurora-band {
+    top: -12%;
+    bottom: auto;
+  }
+
+  .argo-aurora-top .argo-aurora-band-1 {
+    left: -24%;
+    width: 54%;
+    background: radial-gradient(44% 50% at 50% 12%, rgb(11 70 134 / 0.44) 0%, transparent 74%);
+  }
+
+  .argo-aurora-top .argo-aurora-band-2 {
+    left: 28%;
+    width: 46%;
+    background: radial-gradient(42% 52% at 50% 10%, rgb(177 33 40 / 0.2) 0%, transparent 72%);
+  }
+
+  .argo-aurora-top .argo-aurora-band-3 {
+    right: -6%;
+    width: 50%;
+    background: radial-gradient(46% 50% at 50% 14%, rgb(255 183 0 / 0.24) 0%, transparent 74%);
+  }
+
+  /**
+   * The site-wide reduced-motion rule collapses animation-duration, which would
+   * freeze these at an arbitrary keyframe. Drop the curtains entirely instead
+   * and let the static dawn stand on its own.
+   */
+  @media (prefers-reduced-motion: reduce) {
+    .argo-aurora {
+      display: none;
+    }
+  }
+
+  /**
+   * The same curtains at card scale — the hover state for a project card.
+   *
+   * Reuses `.argo-aurora-band` and its three keyframes rather than defining a
+   * second gradient language, retuned for a box roughly a quarter the size.
+   *
+   * Split across two elements on purpose. The curtain owns entrance and exit
+   * (transitions); the band inside owns the steady drift (an infinite keyframe
+   * animation). Put both on one element and the animation wins the transform
+   * outright — a running animation beats a transition on the same property — so
+   * the entrance would never play and the exit would snap.
+   *
+   * Deliberately not `.argo-aurora` — that class is `display: none` under
+   * reduced motion, which would leave the hover with no visible response.
+   */
+  .argo-aurora-card {
+    position: absolute;
+    inset: 0;
+    overflow: hidden;
+    /* Hugs the bottom edge and thins out before it reaches the text. */
+    -webkit-mask-repeat: no-repeat;
+    mask-repeat: no-repeat;
+    -webkit-mask-image: linear-gradient(
+      0deg,
+      #000 0%,
+      rgb(0 0 0 / 0.6) 46%,
+      rgb(0 0 0 / 0.2) 74%,
+      transparent 100%
+    );
+    mask-image: linear-gradient(
+      0deg,
+      #000 0%,
+      rgb(0 0 0 / 0.6) 46%,
+      rgb(0 0 0 / 0.2) 74%,
+      transparent 100%
+    );
+  }
+
+  /**
+   * Each curtain enters and leaves on its own curve, duration and offset, so the
+   * three do not read as one block sliding in. Exit is the base rule, entrance
+   * is the hover rule — that asymmetry is the whole trick, and it is why exit is
+   * consistently slower here: light should fall away rather than be switched off.
+   *
+   * Per-card jitter arrives as custom properties from the component, so no two
+   * cards in a grid share a phase.
+   */
+  .argo-aurora-curtain {
+    position: absolute;
+    inset: 0;
+    opacity: 0;
+  }
+
+  .argo-aurora-curtain-1 {
+    /* Sinks away to the lower left. */
+    transform: translate3d(-12%, 12%, 0) scale(0.92);
+    transition:
+      opacity 600ms cubic-bezier(0.55, 0, 1, 0.45) var(--argo-exit-1, 0ms),
+      transform 600ms cubic-bezier(0.55, 0, 1, 0.45) var(--argo-exit-1, 0ms);
+  }
+
+  .argo-aurora-curtain-2 {
+    /* Collapses straight down — the shortest, quietest of the three. */
+    transform: translate3d(0, 18%, 0) scaleY(0.66);
+    transition:
+      opacity 480ms cubic-bezier(0.4, 0, 0.7, 0.2) var(--argo-exit-2, 0ms),
+      transform 480ms cubic-bezier(0.4, 0, 0.7, 0.2) var(--argo-exit-2, 0ms);
+  }
+
+  .argo-aurora-curtain-3 {
+    /* Drags off to the right and lingers longest. */
+    transform: translate3d(16%, 6%, 0) scale(0.94);
+    transition:
+      opacity 760ms cubic-bezier(0.33, 0, 0.85, 0.3) var(--argo-exit-3, 0ms),
+      transform 760ms cubic-bezier(0.33, 0, 0.85, 0.3) var(--argo-exit-3, 0ms);
+  }
+
+  .group:hover .argo-aurora-curtain,
+  .group:focus-visible .argo-aurora-curtain {
+    opacity: 1;
+    transform: none;
+  }
+
+  .group:hover .argo-aurora-curtain-1,
+  .group:focus-visible .argo-aurora-curtain-1 {
+    transition:
+      opacity 420ms var(--ease-out) var(--argo-enter-1, 0ms),
+      transform 420ms var(--ease-out) var(--argo-enter-1, 0ms);
+  }
+
+  .group:hover .argo-aurora-curtain-2,
+  .group:focus-visible .argo-aurora-curtain-2 {
+    transition:
+      opacity 560ms cubic-bezier(0.16, 1, 0.3, 1) var(--argo-enter-2, 0ms),
+      transform 560ms cubic-bezier(0.16, 1, 0.3, 1) var(--argo-enter-2, 0ms);
+  }
+
+  .group:hover .argo-aurora-curtain-3,
+  .group:focus-visible .argo-aurora-curtain-3 {
+    /* Overshoots a hair on the way in — the one band that arrives with a lift. */
+    transition:
+      opacity 380ms cubic-bezier(0.34, 1.28, 0.64, 1) var(--argo-enter-3, 0ms),
+      transform 380ms cubic-bezier(0.34, 1.28, 0.64, 1) var(--argo-enter-3, 0ms);
+  }
+
+  /**
+   * The steady state. Idle cards cost nothing: a grid would otherwise keep three
+   * blurred, composited layers per card animating forever behind an invisible
+   * curtain, and the compositor does not skip work just because a layer cannot
+   * be seen. Paused is the default; hover starts the drift.
+   *
+   * The negative delay is a phase offset, not a wait — it starts each band
+   * partway through its own cycle so a row of cards is never in lockstep.
+   */
+  .argo-aurora-card .argo-aurora-band {
+    filter: blur(40px);
+    animation-play-state: paused;
+  }
+
+  .group:hover .argo-aurora-card .argo-aurora-band,
+  .group:focus-visible .argo-aurora-card .argo-aurora-band {
+    animation-play-state: running;
+  }
+
+  /**
+   * Alphas roughly a fifth of the page-level sky, and the colour stops carry the
+   * fade rather than jumping straight to transparent — a single stop to
+   * `transparent` at this scale is what reads as a lit disc instead of weather.
+   * The bands are also wider than the card so no falloff edge lands inside it.
+   */
+  .argo-aurora-card .argo-aurora-band-1 {
+    left: -26%;
+    width: 104%;
+    background: radial-gradient(
+      82% 62% at 50% 104%,
+      rgb(255 183 0 / 0.13) 0%,
+      rgb(255 183 0 / 0.05) 44%,
+      rgb(255 183 0 / 0) 78%
+    );
+    animation-duration: var(--argo-drift-1, 19s);
+    animation-delay: var(--argo-phase-1, 0s);
+  }
+
+  .argo-aurora-card .argo-aurora-band-2 {
+    left: 4%;
+    width: 92%;
+    background: radial-gradient(
+      74% 58% at 50% 106%,
+      rgb(177 33 40 / 0.09) 0%,
+      rgb(177 33 40 / 0.035) 46%,
+      rgb(177 33 40 / 0) 76%
+    );
+    animation-duration: var(--argo-drift-2, 25s);
+    animation-delay: var(--argo-phase-2, 0s);
+  }
+
+  .argo-aurora-card .argo-aurora-band-3 {
+    right: -28%;
+    width: 108%;
+    background: radial-gradient(
+      86% 60% at 50% 102%,
+      rgb(11 70 134 / 0.16) 0%,
+      rgb(11 70 134 / 0.06) 46%,
+      rgb(11 70 134 / 0) 80%
+    );
+    animation-duration: var(--argo-drift-3, 31s);
+    animation-delay: var(--argo-phase-3, 0s);
+  }
+
+  /**
+   * Keep the glow, drop everything that moves: no drift, and no travel on the
+   * way in or out. The fade alone still reports the hover.
+   */
+  @media (prefers-reduced-motion: reduce) {
+    .argo-aurora-card .argo-aurora-band {
+      animation: none;
+      transform: none;
+    }
+
+    .argo-aurora-curtain {
+      transform: none;
+      transition: opacity 240ms var(--ease-out);
+    }
+
+    .group:hover .argo-aurora-curtain,
+    .group:focus-visible .argo-aurora-curtain {
+      transform: none;
+      transition: opacity 240ms var(--ease-out);
+    }
+  }
+}
+
+/* skewX gives the curtains their lean; scaleY is the vertical breath. */
+@keyframes argo-aurora-a {
+  0% {
+    transform: translate3d(-22%, 6%, 0) scaleY(0.86) skewX(-12deg);
+    opacity: 0.42;
+  }
+  38% {
+    transform: translate3d(26%, -9%, 0) scaleY(1.28) skewX(9deg);
+    opacity: 1;
+  }
+  71% {
+    transform: translate3d(4%, 3%, 0) scaleY(1) skewX(-3deg);
+    opacity: 0.62;
+  }
+  100% {
+    transform: translate3d(-22%, 6%, 0) scaleY(0.86) skewX(-12deg);
+    opacity: 0.42;
+  }
+}
+
+@keyframes argo-aurora-b {
+  0% {
+    transform: translate3d(18%, 4%, 0) scaleY(1.1) skewX(10deg);
+    opacity: 0.3;
+  }
+  44% {
+    transform: translate3d(-28%, -10%, 0) scaleY(0.82) skewX(-11deg);
+    opacity: 0.9;
+  }
+  76% {
+    transform: translate3d(-8%, 6%, 0) scaleY(1.22) skewX(4deg);
+    opacity: 0.46;
+  }
+  100% {
+    transform: translate3d(18%, 4%, 0) scaleY(1.1) skewX(10deg);
+    opacity: 0.3;
+  }
+}
+
+@keyframes argo-aurora-c {
+  0% {
+    transform: translate3d(20%, -4%, 0) scaleY(1.18) skewX(11deg);
+    opacity: 0.46;
+  }
+  33% {
+    transform: translate3d(-14%, 8%, 0) scaleY(0.84) skewX(-7deg);
+    opacity: 0.2;
+  }
+  67% {
+    transform: translate3d(-30%, -7%, 0) scaleY(1.32) skewX(-14deg);
+    opacity: 0.85;
+  }
+  100% {
+    transform: translate3d(20%, -4%, 0) scaleY(1.18) skewX(11deg);
+    opacity: 0.46;
+  }
+}
+
+/* One-shot arrival for the top aurora — see .argo-aurora-top. */
+@keyframes argo-aurora-reveal {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/**
+ * Gas-filled headline type — the hero's "next-gen".
+ *
+ * Three layers, drawn back to front:
+ *
+ *   1. the real text, in `bone`, in normal flow. It owns layout, selection and
+ *      the accessibility tree, and it is what shows if the two decorative
+ *      layers never arrive (old browser, `background-clip: text` unsupported).
+ *      Nothing below it is ever load-bearing.
+ *   2. `::before` — the same glyphs, coloured only, blurred into a bloom that
+ *      leaks past the letterforms. This is what sells "gas" rather than
+ *      "gradient text": light escaping the shape.
+ *   3. `::after` — the fill itself, the same gradients unblurred and over a
+ *      `bone` base so the letters stay legible where no cloud is passing.
+ *
+ * Both pseudo-elements duplicate the word through `content: attr(data-text)`,
+ * so the markup has to carry it: `<span class="argo-gas" data-text="next-gen">`.
+ * Pseudo content is not exposed to assistive tech and is not selectable, which
+ * is exactly right here — the word must not be announced or copied three times.
+ *
+ * The clouds move by `background-position`, which repaints rather than
+ * composites. That is the one genuinely expensive thing on this page, and it is
+ * affordable only because the painted area is a single word: keep this off body
+ * copy, and off anything that repeats down a list.
+ */
+@layer components {
+  .argo-gas {
+    position: relative;
+    display: inline-block;
+    /* Keeps the bloom's negative z-index inside this span rather than letting it
+       sort behind the hero's background. */
+    isolation: isolate;
+  }
+
+  .argo-gas::before,
+  .argo-gas::after {
+    content: attr(data-text);
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    /**
+     * Four clouds at deliberately mismatched sizes. Each is far larger than the
+     * word, so what shows through the glyphs is always the middle of a cloud —
+     * a stop reaching `transparent` inside the text is what would read as a
+     * hard-edged blob instead of vapour.
+     *
+     * One hue family, not three. `--color-argo-yellow` is the centre of it; the
+     * other two warm clouds are that same yellow pushed down toward the book's
+     * red (#b12128) and up toward `bone`, so the whole range is brand yellow
+     * ageing hotter and cooler rather than a set of separate colours. Blue was
+     * tried and pulled — against the yellow it read as a second brand rather
+     * than as weather. A `bone` cloud rides with them so the mix keeps
+     * returning to the headline's own colour.
+     */
+    background-image:
+      radial-gradient(58% 150% at 50% 50%, #ffb700 0%, rgb(255 183 0 / 0) 66%),
+      radial-gradient(54% 140% at 50% 50%, #ff8c1a 0%, rgb(255 140 26 / 0) 64%),
+      radial-gradient(48% 130% at 50% 50%, #ffd98a 0%, rgb(255 217 138 / 0) 62%),
+      radial-gradient(66% 170% at 50% 50%, #f4f5f2 0%, rgb(244 245 242 / 0) 70%);
+    background-size:
+      190% 340%,
+      170% 300%,
+      150% 280%,
+      210% 360%;
+    background-repeat: no-repeat;
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    opacity: 0;
+  }
+
+  .argo-gas::before {
+    z-index: -1;
+    /* Bloom only — no base colour, or the blur would smear a bone slab behind
+       the word. */
+    filter: blur(14px);
+    animation:
+      argo-gas-arrive 5000ms cubic-bezier(0.4, 0, 0.6, 1) 400ms both,
+      argo-gas-drift 27s ease-in-out 700ms infinite;
+    /* The fill's own opacity is 1; the bloom sits well under it. */
+    --argo-gas-opacity: 0.5;
+  }
+
+  .argo-gas::after {
+    background-color: var(--color-bone);
+    /**
+     * Faster than the bloom and out of phase with it (19s against 27s, coprime),
+     * so the halo is never a straight copy of the fill — it lags and leads, the
+     * way a glow around something moving would.
+     */
+    animation:
+      argo-gas-arrive 5000ms cubic-bezier(0.4, 0, 0.6, 1) 400ms both,
+      argo-gas-drift 19s ease-in-out 700ms infinite;
+    --argo-gas-opacity: 1;
+  }
+
+  /**
+   * The site-wide reduced-motion rule zeroes animation-duration, which would
+   * park the drift on its first keyframe — harmless, but the arrival would also
+   * snap in. Hand both layers their end state directly instead: the word is
+   * gas-filled from first paint, and nothing moves.
+   */
+  @media (prefers-reduced-motion: reduce) {
+    .argo-gas::before,
+    .argo-gas::after {
+      animation: none;
+      opacity: var(--argo-gas-opacity);
+      background-position:
+        18% 26%,
+        82% 72%,
+        76% 12%,
+        30% 88%;
+    }
+  }
+}
+
+/**
+ * The word fills up — over five seconds, so it is something you notice having
+ * happened rather than something you watch happen. Held at `both` so the
+ * from-state covers the delay.
+ *
+ * Deliberately not the site's `--ease-out`: that curve is front-loaded, which
+ * is right for UI responding to a click and wrong here — it would dump most of
+ * the fill in the first second and make the remaining four read as lag. A
+ * symmetric curve keeps the whole five seconds imperceptible.
+ */
+@keyframes argo-gas-arrive {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: var(--argo-gas-opacity);
+  }
+}
+
+/**
+ * Each cloud takes its own path at its own speed — the yellow crosses left to
+ * right while the blue goes the other way and the bone one barely moves. Four
+ * layers travelling together would just be one gradient sliding.
+ */
+@keyframes argo-gas-drift {
+  0% {
+    background-position:
+      0% 30%,
+      100% 70%,
+      80% 0%,
+      20% 100%;
+  }
+  27% {
+    background-position:
+      64% 82%,
+      22% 14%,
+      12% 88%,
+      46% 42%;
+  }
+  53% {
+    background-position:
+      100% 18%,
+      58% 96%,
+      100% 46%,
+      74% 8%;
+  }
+  78% {
+    background-position:
+      36% 60%,
+      0% 40%,
+      44% 24%,
+      8% 66%;
+  }
+  100% {
+    background-position:
+      0% 30%,
+      100% 70%,
+      80% 0%,
+      20% 100%;
+  }
+}

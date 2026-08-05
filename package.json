@@ -1,0 +1,50 @@
+{
+  "name": "argo",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit",
+    "seed": "bun run scripts/seed.ts",
+    "payload": "payload",
+    "migrate": "payload migrate",
+    "migrate:create": "payload migrate:create",
+    "generate:types": "payload generate:types",
+    "generate:importmap": "payload generate:importmap"
+  },
+  "dependencies": {
+    "@payloadcms/db-sqlite": "3.87.0",
+    "@payloadcms/next": "3.87.0",
+    "@payloadcms/plugin-form-builder": "3.87.0",
+    "@payloadcms/richtext-lexical": "3.87.0",
+    "@payloadcms/ui": "3.87.0",
+    "graphql": "^16.11.0",
+    "next": "16.3.0",
+    "payload": "3.87.0",
+    "react": "19.2.8",
+    "react-dom": "19.2.8",
+    "server-only": "^0.0.1",
+    "sharp": "^0.34.4"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@tailwindcss/postcss": "4.3.3",
+    "@types/bun": "^1.3.14",
+    "@types/node": "^24.10.1",
+    "@types/react": "^19.2.7",
+    "@types/react-dom": "^19.2.4",
+    "eslint": "^9",
+    "eslint-config-next": "^16.3.0",
+    "sass": "^1.102.0",
+    "tailwindcss": "4.3.3",
+    "typescript": "^5.9.3",
+    "typescript-eslint": "^8.66.0"
+  },
+  "trustedDependencies": [
+    "@parcel/watcher"
+  ]
+}

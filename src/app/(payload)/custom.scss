@@ -1,0 +1,54 @@
+/**
+ * Admin-only theming. The frontend's Tailwind layer never reaches this route
+ * group, and this file never reaches the frontend — that separation is the whole
+ * reason for the two root layouts.
+ *
+ * Payload exposes its design tokens as CSS variables, so branding the admin is a
+ * matter of restating a handful of them rather than overriding component styles,
+ * which would break on every Payload upgrade.
+ */
+
+:root {
+  --theme-success-500: #ffb700;
+}
+
+[data-theme='dark'] {
+  // The frontend's ink field, so the admin reads as the same product.
+  --theme-bg: #08090b;
+  --theme-input-bg: #0a0c10;
+
+  --theme-elevation-0: #08090b;
+  --theme-elevation-50: #0a0c10;
+  --theme-elevation-100: #12151b;
+  --theme-elevation-150: #161b26;
+  --theme-elevation-200: #1c212c;
+
+  --theme-text: #f4f5f2;
+
+  // Argo yellow as the action colour, with ink text on it for contrast.
+  --theme-success-500: #ffb700;
+  --color-success-500: #ffb700;
+}
+
+// Payload's primary button is driven by the elevation ramp rather than the
+// accent tokens, so the brand colour has to be stated on the button itself.
+// Ink text on yellow, matching the frontend's "get involved" CTA.
+[data-theme='dark'] .btn--style-primary {
+  --color: #08090b;
+
+  background-color: #ffb700;
+  color: #08090b;
+
+  &:hover,
+  &:focus-visible {
+    background-color: #e6a500;
+    color: #08090b;
+  }
+}
+
+// The lockup carries its own spacing; Payload's default gap doubles it up.
+.graphic-logo,
+.graphic-icon {
+  display: flex;
+  align-items: center;
+}

@@ -1,0 +1,27 @@
+# Caddy requests and renews a Let's Encrypt certificate for SITE_DOMAIN on its
+# own — there is no certbot step and no renewal cron to forget.
+{
+	email {$TLS_EMAIL}
+}
+
+{$SITE_DOMAIN} {
+	encode zstd gzip
+
+	# The admin is the only authenticated surface here, and Payload sets its own
+	# auth cookies — these are the headers it cannot set for itself.
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		X-Content-Type-Options "nosniff"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		# The site frames nothing and should be framed by nothing.
+		X-Frame-Options "DENY"
+		-Server
+	}
+
+	# Uploaded media is content-addressed by filename and immutable in practice;
+	# Next's own /_next/static assets are hashed and already send this header.
+	@media path /api/media/file/*
+	header @media Cache-Control "public, max-age=31536000, immutable"
+
+	reverse_proxy app:3000
+}
