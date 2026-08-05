@@ -1,0 +1,52 @@
+# The deployment as Coolify runs it: the site only.
+#
+# Coolify's own Traefik terminates TLS and routes to this container, so the
+# Caddy service from docker-compose.yml is absent — it would contend for
+# :80/:443 with the proxy that is already there. The security headers Caddy set
+# are the one thing lost; add them as Traefik labels if they matter.
+#
+# In Coolify: new resource -> repository -> build pack "Docker Compose",
+# compose file `docker-compose.coolify.yml`. Set the domain on the `app`
+# service, and set PAYLOAD_SECRET / SITE_DOMAIN in the environment tab.
+#
+# Raise the deployment timeout and the health check's start period: the
+# container migrates, seeds and runs a full `next build` before it serves
+# anything, which is well past Coolify's defaults.
+
+services:
+  app:
+    build: .
+    restart: unless-stopped
+    environment:
+      # Coolify assigns the domain; this is only the canonical origin baked
+      # into canonicals, the sitemap, robots and the OG images. Set SITE_DOMAIN
+      # in Coolify's environment tab, without a scheme.
+      NEXT_PUBLIC_SITE_URL: https://${SITE_DOMAIN}
+      PAYLOAD_SECRET: ${PAYLOAD_SECRET}
+      DATABASE_URI: file:/data/argo.db
+      MEDIA_DIR: /app/media
+      # First boot of an empty database only; see .env.example.
+      ARGO_SEED: ${ARGO_SEED:-false}
+      ARGO_SKIP_BUILD: ${ARGO_SKIP_BUILD:-false}
+    volumes:
+      # The database. This is the site's content — back this up.
+      - argo-data:/data
+      # Uploaded media. Also content: Payload stores the file here and only a
+      # row pointing at it in the database.
+      - argo-media:/app/media
+      # Build output and Next's incremental cache, so a page revalidated by an
+      # editor's publish survives a restart.
+      - argo-next:/app/.next
+    healthcheck:
+      test: ['CMD', 'curl', '-fsS', 'http://localhost:3000/robots.txt']
+      start_period: 180s
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    expose:
+      - '3000'
+
+volumes:
+  argo-data:
+  argo-media:
+  argo-next:

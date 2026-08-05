@@ -3,6 +3,7 @@ import 'server-only'
 import type { DefaultTypedEditorState } from '@payloadcms/richtext-lexical'
 import { cacheLife, cacheTag } from 'next/cache'
 
+import { TIER_SCALES } from '@/collections/PartnerTiers'
 import type {
   Form,
   Media,
@@ -364,7 +365,7 @@ export async function getPartnerTiers(): Promise<PartnerTier[]> {
 
   const payload = await payloadClient()
   const [tiers, partners] = await Promise.all([
-    payload.find({ collection: 'partner-tiers', sort: 'order', depth: 0, pagination: false }),
+    payload.find({ collection: 'partner-tiers', sort: '_order', depth: 0, pagination: false }),
     payload.find({
       collection: 'partners',
       // A lapsed sponsorship falls off the wall on its own. `exists: false`
@@ -375,7 +376,7 @@ export async function getPartnerTiers(): Promise<PartnerTier[]> {
           { activeUntil: { greater_than: new Date().toISOString() } },
         ],
       },
-      sort: 'order',
+      sort: '_order',
       depth: 1,
       pagination: false,
     }),
@@ -397,6 +398,9 @@ export async function getPartnerTiers(): Promise<PartnerTier[]> {
     .map((tier) => ({
       label: tier.label,
       minWidth: tier.minWidth,
+      // Resolved here rather than in the component: the wall renders numbers,
+      // and the key -> multiplier table is the collection's business.
+      scale: TIER_SCALES[tier.logoScale] ?? TIER_SCALES.default,
       partners: partners.docs
         .filter((partner) => relationId(partner.tier) === tier.id)
         .map(toPartner)

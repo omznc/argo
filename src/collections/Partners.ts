@@ -8,12 +8,17 @@ export const Partners: CollectionConfig = {
   slug: 'partners',
   labels: { singular: 'Partner', plural: 'Partners' },
   access: { read: () => true },
+  /* Same drag-to-reorder as the tiers. The list is ordered across the whole
+     collection, not per tier, which is enough: the wall reads the partners of
+     one tier at a time, so their relative order is what shows up. */
+  orderable: true,
   admin: {
     group: 'Partners',
     useAsTitle: 'name',
-    defaultColumns: ['name', 'tier', 'order', 'activeUntil'],
+    defaultColumns: ['name', 'tier', 'activeUntil'],
+    description: 'Drag the rows to reorder logos within their tier.',
   },
-  defaultSort: 'order',
+  defaultSort: '_order',
   hooks: revalidateFlatHooks(PARTNERS_TAG),
   fields: [
     {
@@ -41,13 +46,6 @@ export const Partners: CollectionConfig = {
       admin: { position: 'sidebar' },
     },
     {
-      name: 'order',
-      type: 'number',
-      required: true,
-      defaultValue: 0,
-      admin: { position: 'sidebar', description: 'Position within the tier, low first.' },
-    },
-    {
       name: 'activeUntil',
       type: 'date',
       admin: {
@@ -72,15 +70,15 @@ export const Partners: CollectionConfig = {
               name: 'maxHeight',
               type: 'number',
               required: true,
-              defaultValue: 30,
-              admin: { description: 'px', width: '50%' },
+              defaultValue: 38,
+              admin: { description: 'px, before the tier scale', width: '50%' },
             },
             {
               name: 'maxWidth',
               type: 'number',
               required: true,
-              defaultValue: 130,
-              admin: { description: 'px', width: '50%' },
+              defaultValue: 163,
+              admin: { description: 'px, before the tier scale', width: '50%' },
             },
           ],
         },

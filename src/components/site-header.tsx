@@ -172,7 +172,7 @@ export function SiteHeader() {
       >
         <Link href="/" aria-label="Argo — home" className="shrink-0">
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/assets/argo-lockup-white.svg" alt="Argo" className="h-8 w-auto md:h-10" />
+          <img src="/assets/argo-lockup-white.svg" alt="Argo Robotics" className="h-8 w-auto md:h-10" />
         </Link>
 
         <nav className="hidden items-center gap-[34px] font-mono text-[13px] lg:flex">

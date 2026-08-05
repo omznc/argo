@@ -395,11 +395,14 @@ export interface MemberRole {
   createdAt: string;
 }
 /**
+ * Drag the rows to reorder logos within their tier.
+ *
  * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "partners".
  */
 export interface Partner {
   id: number;
+  _order?: string | null;
   /**
    * Also the logo's alt text.
    */
@@ -411,19 +414,15 @@ export interface Partner {
   website?: string | null;
   tier: number | PartnerTier;
   /**
-   * Position within the tier, low first.
-   */
-  order: number;
-  /**
    * Optional. The wall stops rendering this partner after this date — sponsorships lapse and nobody remembers to come back and delete the logo.
    */
   activeUntil?: string | null;
   /**
-   * px
+   * px, before the tier scale
    */
   maxHeight: number;
   /**
-   * px
+   * px, before the tier scale
    */
   maxWidth: number;
   updatedAt: string;
@@ -448,18 +447,21 @@ export interface PartnerLogo {
   focalY?: number | null;
 }
 /**
+ * Drag the rows to reorder the wall — the top row here is the top row on the site.
+ *
  * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "partner-tiers".
  */
 export interface PartnerTier {
   id: number;
+  _order?: string | null;
   label: string;
   /**
-   * Low numbers sit at the top of the wall.
+   * Scales every logo and plaque in this row. Use it to give a headline sponsor more presence without editing each logo.
    */
-  order: number;
+  logoScale: 'small' | 'default' | 'large' | 'huge';
   /**
-   * Plaque minimum width in px. The academic row runs wider than the rest.
+   * Plaque minimum width in px, before the row scale. The academic row runs wider than the rest.
    */
   minWidth: number;
   updatedAt: string;
@@ -892,11 +894,11 @@ export interface MemberPhotosSelect<T extends boolean = true> {
  * via the `definition` "partners_select".
  */
 export interface PartnersSelect<T extends boolean = true> {
+  _order?: T;
   name?: T;
   logo?: T;
   website?: T;
   tier?: T;
-  order?: T;
   activeUntil?: T;
   maxHeight?: T;
   maxWidth?: T;
@@ -908,8 +910,9 @@ export interface PartnersSelect<T extends boolean = true> {
  * via the `definition` "partner-tiers_select".
  */
 export interface PartnerTiersSelect<T extends boolean = true> {
+  _order?: T;
   label?: T;
-  order?: T;
+  logoScale?: T;
   minWidth?: T;
   updatedAt?: T;
   createdAt?: T;

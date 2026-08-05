@@ -3,6 +3,8 @@ import * as migration_20260805_171537_add_post_lede from './20260805_171537_add_
 import * as migration_20260805_191232_add_settings_partners_forms from './20260805_191232_add_settings_partners_forms';
 import * as migration_20260805_192452_reading_minutes_derived from './20260805_192452_reading_minutes_derived';
 import * as migration_20260805_192906_add_members from './20260805_192906_add_members';
+import * as migration_20260805_204011_partner_tier_scale from './20260805_204011_partner_tier_scale';
+import * as migration_20260805_204147_partner_drop_order from './20260805_204147_partner_drop_order';
 
 export const migrations = [
   {
@@ -28,6 +30,16 @@ export const migrations = [
   {
     up: migration_20260805_192906_add_members.up,
     down: migration_20260805_192906_add_members.down,
-    name: '20260805_192906_add_members'
+    name: '20260805_192906_add_members',
+  },
+  {
+    up: migration_20260805_204011_partner_tier_scale.up,
+    down: migration_20260805_204011_partner_tier_scale.down,
+    name: '20260805_204011_partner_tier_scale',
+  },
+  {
+    up: migration_20260805_204147_partner_drop_order.up,
+    down: migration_20260805_204147_partner_drop_order.down,
+    name: '20260805_204147_partner_drop_order'
   },
 ];

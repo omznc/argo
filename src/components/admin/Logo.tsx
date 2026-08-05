@@ -6,6 +6,6 @@
 export function Logo() {
   return (
     // eslint-disable-next-line @next/next/no-img-element
-    <img src="/assets/argo-lockup-white.svg" alt="Argo" style={{ height: 42, width: 'auto' }} />
+    <img src="/assets/argo-lockup-white.svg" alt="Argo Robotics" style={{ height: 42, width: 'auto' }} />
   )
 }

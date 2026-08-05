@@ -62,6 +62,8 @@ export type PartnerTier = {
   label: string
   /** Plaque min-width differs between the academic row and the rest. */
   minWidth: number
+  /** Row-wide multiplier on every plaque and logo in the tier; 1 is the default size. */
+  scale: number
   partners: Partner[]
 }
 

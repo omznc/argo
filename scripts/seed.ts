@@ -117,13 +117,15 @@ async function seedPartners(payload: BasePayload): Promise<void> {
     }
   }
 
-  for (const [tierIndex, tier] of partnerTiers.entries()) {
+  /* No order fields here: both collections are `orderable`, so Payload assigns
+     each new doc a key after the last one — creation order is the wall order. */
+  for (const tier of partnerTiers) {
     const tierDoc = await payload.create({
       collection: 'partner-tiers',
-      data: { label: tier.label, order: tierIndex, minWidth: tier.minWidth },
+      data: { label: tier.label, logoScale: 'default', minWidth: tier.minWidth },
     })
 
-    for (const [partnerIndex, partner] of tier.partners.entries()) {
+    for (const partner of tier.partners) {
       const logo = await payload.create({
         collection: 'partner-logos',
         data: {},
@@ -136,7 +138,6 @@ async function seedPartners(payload: BasePayload): Promise<void> {
           name: partner.name,
           logo: logo.id,
           tier: tierDoc.id,
-          order: partnerIndex,
           website: partner.website,
           maxHeight: partner.maxHeight,
           maxWidth: partner.maxWidth,

@@ -58,8 +58,10 @@ export async function SiteFooter() {
         </div>
 
         <div className="mt-16 flex flex-wrap items-center justify-between gap-4 font-mono text-xs text-dim">
+          {/* Matches the header lockup — the footer mark reading half its size
+              was an oversight, not a hierarchy decision. */}
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/assets/argo-lockup-white.svg" alt="Argo" className="h-[22px] w-auto" />
+          <img src="/assets/argo-lockup-white.svg" alt="Argo Robotics" className="h-8 w-auto md:h-10" />
 
           <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
             <span>copyright argo · belgrade, serbia</span>

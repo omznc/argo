@@ -76,7 +76,10 @@ export default function FrontendLayout({ children }: { children: React.ReactNode
       lang="en"
       className={`${spaceGrotesk.variable} ${jetbrainsMono.variable} ${archivo.variable}`}
     >
-      <body className="relative min-h-screen overflow-x-hidden">
+      {/* Column layout so `main` absorbs the slack on a page shorter than the
+          viewport — otherwise the footer stops mid-screen and its dawn gradient
+          leaves a band of bare background under it. */}
+      <body className="relative flex min-h-screen flex-col overflow-x-hidden">
         {/* Clips the top decorations to the page box — their fixed heights would
             otherwise outrun short pages and add dead scroll below the footer. */}
         <div aria-hidden="true" className="pointer-events-none absolute inset-0 -z-10 overflow-hidden">
@@ -101,7 +104,9 @@ export default function FrontendLayout({ children }: { children: React.ReactNode
         <OrganizationJsonLd />
         <EagerNavigation />
         <SiteHeader />
-        <main id="main">{children}</main>
+        <main id="main" className="flex-1">
+          {children}
+        </main>
         <SiteFooter />
       </body>
     </html>
